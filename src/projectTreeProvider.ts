@@ -28,8 +28,9 @@ class SessionNode extends vscode.TreeItem {
     this.contextValue = 'session';
     this.iconPath = statusIcon(session.status);
     this.command = {
-      command: 'claudeAgentManager.openPanel',
+      command: 'claudeAgentManager.openSession',
       title: 'Open session',
+      arguments: [projectKey, session.sessionId],
     };
   }
 }

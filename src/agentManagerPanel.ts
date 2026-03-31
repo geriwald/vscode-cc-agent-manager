@@ -35,6 +35,30 @@ export class AgentManagerPanel {
   private _currentSessionId: string | undefined;
   private _terminalManager: TerminalManager;
 
+  private _pendingSession: { projectKey: string; sessionId: string; agentId?: string } | undefined;
+
+  public static createOrShowSession(
+    context: vscode.ExtensionContext,
+    projectKey: string,
+    sessionId: string,
+    agentId?: string,
+  ): void {
+    AgentManagerPanel.createOrShow(context);
+    const panel = AgentManagerPanel.currentPanel!;
+    if (panel._panel.webview.html) {
+      // Webview already loaded — send immediately (with small delay for init)
+      setTimeout(() => {
+        panel._panel.webview.postMessage({
+          command: 'loadSessionFromTree',
+          projectKey,
+          sessionId,
+          agentId,
+        });
+      }, panel._pendingSession ? 200 : 50);
+    }
+    panel._pendingSession = { projectKey, sessionId, agentId };
+  }
+
   public static createOrShow(context: vscode.ExtensionContext): void {
     const column =
       vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One;
@@ -72,7 +96,19 @@ export class AgentManagerPanel {
     );
 
     // Send initial data after a tick so the webview JS has loaded
-    setTimeout(() => this._sendUpdate(), 100);
+    setTimeout(() => {
+      this._sendUpdate();
+      if (this._pendingSession) {
+        const { projectKey, sessionId, agentId } = this._pendingSession;
+        this._pendingSession = undefined;
+        this._panel.webview.postMessage({
+          command: 'loadSessionFromTree',
+          projectKey,
+          sessionId,
+          agentId,
+        });
+      }
+    }, 100);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 

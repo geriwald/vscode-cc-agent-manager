@@ -154,6 +154,18 @@
       document.getElementById('last-updated').textContent =
         new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+    if (msg.command === 'loadSessionFromTree') {
+      // Activity Bar tree view clicked a session — load it
+      selectedProjectKey = msg.projectKey;
+      selectedSessionId = msg.sessionId;
+      selectedAgentId = msg.agentId || null;
+      if (activeTab !== 'sessions') {
+        activeTab = 'sessions';
+        const tabBar = document.getElementById('tab-bar');
+        if (tabBar) tabBar.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === 'sessions'));
+      }
+      vscode.postMessage({ command: 'loadConversation', projectKey: msg.projectKey, sessionId: msg.sessionId, agentId: msg.agentId });
+    }
     if (msg.command === 'conversation') {
       currentSessionCwd = msg.cwd ?? null;
       hasLiveTerminal = false;

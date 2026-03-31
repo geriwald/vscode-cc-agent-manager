@@ -81,9 +81,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('claudeAgentManager.filterPinned', () => {
       setFilterContext('pinned', treeProvider.toggleFilter('pinned'));
     }),
+    vscode.commands.registerCommand('claudeAgentManager.openSession', (projectKey: string, sessionId: string, agentId?: string) => {
+      AgentManagerPanel.createOrShowSession(context, projectKey, sessionId, agentId);
+    }),
     vscode.commands.registerCommand('claudeAgentManager.openSettings', () => {
       AgentManagerPanel.createOrShow(context);
-      // Settings panel is toggled via webview message — just open the panel
     }),
   );
 }
