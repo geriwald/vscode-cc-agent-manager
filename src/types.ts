@@ -1,5 +1,14 @@
 export type SessionStatus = 'active' | 'thinking' | 'waiting' | 'recent' | 'idle';
 
+export interface BashCommand {
+  command: string;
+  description?: string;
+  timestamp?: string;
+  sessionId: string;
+  isError?: boolean;
+  output?: string;
+}
+
 export interface SubAgent {
   agentId: string;
   slug?: string;
@@ -13,6 +22,7 @@ export interface SubAgent {
   userChars: number;
   assistantLines: number;
   codeLines: number;
+  bashCommands: BashCommand[];
 }
 
 export interface ClaudeSession {
@@ -30,6 +40,7 @@ export interface ClaudeSession {
   userChars: number;
   assistantLines: number;
   codeLines: number;
+  bashCommands: BashCommand[];
 }
 
 export interface ClaudeProject {
