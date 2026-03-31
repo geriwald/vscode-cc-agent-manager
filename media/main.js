@@ -793,10 +793,16 @@
         const proj = hdr.closest('.tree-project');
         const key = proj.dataset.key;
 
-        // In stats mode, clicking a project header shows its stats
+        // In stats/bashback mode, clicking a project header filters the view
         if (activeTab === 'stats' && key) {
           statsProjectKey = key;
           showStats();
+          applySelectedState();
+        } else if (activeTab === 'bashback' && key) {
+          selectedProjectKey = key;
+          selectedSessionId = null;
+          selectedAgentId = null;
+          showBashback();
           applySelectedState();
         }
 
@@ -939,7 +945,13 @@
     selectedProjectKey = projectKey;
     renderedMessageCount = 0;
 
-    // Always switch to Sessions tab when selecting a conversation
+    // Bashback: refresh filtered view without switching tab
+    if (activeTab === 'bashback') {
+      showBashback();
+      applySelectedState();
+      return;
+    }
+    // Switch to Sessions tab if on stats/about
     if (activeTab !== 'sessions') {
       activeTab = 'sessions';
       const tabBar = document.getElementById('tab-bar');
@@ -1003,6 +1015,20 @@
         if (allEl) allEl.classList.add('selected');
       } else {
         const projEl = document.querySelector(`.tree-project[data-key="${CSS.escape(statsProjectKey)}"] .tree-project-header`);
+        if (projEl) projEl.classList.add('selected');
+      }
+      return;
+    }
+
+    if (activeTab === 'bashback') {
+      if (selectedAgentId) {
+        const el = document.querySelector(`.tree-subagent[data-agent-id="${CSS.escape(selectedAgentId)}"]`);
+        if (el) el.classList.add('selected');
+      } else if (selectedSessionId) {
+        const el = document.querySelector(`.tree-session[data-session-id="${CSS.escape(selectedSessionId)}"]`);
+        if (el) el.classList.add('selected');
+      } else if (selectedProjectKey) {
+        const projEl = document.querySelector(`.tree-project[data-key="${CSS.escape(selectedProjectKey)}"] .tree-project-header`);
         if (projEl) projEl.classList.add('selected');
       }
       return;
@@ -2144,17 +2170,29 @@
   }
 
   function renderBashbackView() {
-    // Collect all bash commands from all projects (or filtered project)
-    const projects = statsProjectKey
-      ? allProjects.filter((p) => p.key === statsProjectKey)
+    // Filter by sidebar selection: project > session > agent
+    const filterProject = selectedProjectKey || statsProjectKey;
+    const projects = filterProject
+      ? allProjects.filter((p) => p.key === filterProject)
       : allProjects;
 
     /** @type {Array<{command: string, description?: string, timestamp?: string, sessionId: string, projectName: string, isError?: boolean, output?: string}>} */
     const allCmds = [];
     for (const proj of projects) {
       for (const sess of proj.sessions) {
-        for (const cmd of (sess.bashCommands || [])) {
-          allCmds.push({ ...cmd, projectName: proj.displayName });
+        if (selectedSessionId && selectedProjectKey && sess.sessionId !== selectedSessionId) continue;
+        if (selectedAgentId) {
+          // Show commands from the selected subagent only
+          for (const agent of (sess.subAgents || [])) {
+            if (agent.agentId !== selectedAgentId) continue;
+            for (const cmd of (agent.bashCommands || [])) {
+              allCmds.push({ ...cmd, projectName: proj.displayName });
+            }
+          }
+        } else {
+          for (const cmd of (sess.bashCommands || [])) {
+            allCmds.push({ ...cmd, projectName: proj.displayName });
+          }
         }
       }
     }
