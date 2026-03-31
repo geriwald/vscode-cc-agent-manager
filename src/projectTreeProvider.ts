@@ -44,7 +44,38 @@ function statusIcon(status: string): string {
   }
 }
 
-export type TreeFilter = 'active' | 'waiting' | 'pinned';
+export type TreeFilter = 'all' | 'active' | 'waiting' | 'pinned';
+
+export class ActiveSessionsProvider implements vscode.TreeDataProvider<SessionNode> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<SessionNode | undefined>();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  private _projects: ClaudeProject[] = [];
+
+  refresh(): void {
+    this._projects = readClaudeProjects();
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  getTreeItem(element: SessionNode): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(): SessionNode[] {
+    if (this._projects.length === 0) this._projects = readClaudeProjects();
+    const nodes: SessionNode[] = [];
+    for (const proj of this._projects) {
+      for (const sess of proj.sessions) {
+        if (sess.status === 'active' || sess.status === 'thinking' || sess.status === 'waiting') {
+          const node = new SessionNode(sess, proj.key);
+          node.description = `${proj.displayName} · ${sess.status}`;
+          nodes.push(node);
+        }
+      }
+    }
+    return nodes;
+  }
+}
 
 export class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined>();
@@ -58,6 +89,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
 
   set pinnedKeys(keys: Set<string>) {
     this._pinnedKeys = keys;
+  }
+
+  clearFilters(): void {
+    this._filters.clear();
+    this.refresh();
   }
 
   toggleFilter(filter: TreeFilter): boolean {

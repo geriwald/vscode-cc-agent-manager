@@ -39,6 +39,10 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "claudeAgentManager.filterAll",
+        "title": "All"
+      },
+      {
         "command": "claudeAgentManager.filterActive",
         "title": "Active Sessions"
       },
@@ -70,8 +74,12 @@
     "views": {
       "claude-agent-manager": [
         {
+          "id": "claudeAgentManager.activeSessions",
+          "name": "Active Sessions"
+        },
+        {
           "id": "claudeAgentManager.projectTree",
-          "name": "Projects"
+          "name": "All Projects"
         }
       ]
     },
@@ -82,6 +90,10 @@
         },
         {
           "command": "claudeAgentManager.refreshTree",
+          "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.filterAll",
           "when": "false"
         },
         {
@@ -102,6 +114,11 @@
           "command": "claudeAgentManager.refreshTree",
           "when": "view == claudeAgentManager.projectTree",
           "group": "navigation"
+        },
+        {
+          "command": "claudeAgentManager.filterAll",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "filter@0"
         },
         {
           "command": "claudeAgentManager.filterActive",

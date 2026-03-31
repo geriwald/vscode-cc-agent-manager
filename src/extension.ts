@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { AgentManagerPanel } from './agentManagerPanel';
-import { ProjectTreeProvider } from './projectTreeProvider';
+import { ActiveSessionsProvider, ProjectTreeProvider } from './projectTreeProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
+  const activeProvider = new ActiveSessionsProvider();
   const treeProvider = new ProjectTreeProvider();
+  vscode.window.registerTreeDataProvider('claudeAgentManager.activeSessions', activeProvider);
   vscode.window.registerTreeDataProvider('claudeAgentManager.projectTree', treeProvider);
 
-  // Refresh tree every 30s (matches webview refresh)
-  const refreshTimer = setInterval(() => treeProvider.refresh(), 30_000);
+  // Refresh both trees every 30s (matches webview refresh)
+  const refreshTimer = setInterval(() => { activeProvider.refresh(); treeProvider.refresh(); }, 30_000);
   context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
 
   const setFilterContext = (filter: string, active: boolean) => {
@@ -19,7 +21,11 @@ export function activate(context: vscode.ExtensionContext): void {
       AgentManagerPanel.createOrShow(context);
     }),
     vscode.commands.registerCommand('claudeAgentManager.refreshTree', () => {
+      activeProvider.refresh();
       treeProvider.refresh();
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.filterAll', () => {
+      treeProvider.clearFilters();
     }),
     vscode.commands.registerCommand('claudeAgentManager.filterActive', () => {
       setFilterContext('active', treeProvider.toggleFilter('active'));
