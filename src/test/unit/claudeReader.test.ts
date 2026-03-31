@@ -439,6 +439,170 @@ describe('deriveStatus (via readClaudeProjects)', () => {
   });
 });
 
+describe('bashCommands (via readClaudeProjects)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const recentTs = () => new Date().toISOString();
+
+  function setupSingleProject(jsonlContent: string): void {
+    jest.mocked(fs.existsSync).mockImplementation((p) => p === PROJECTS);
+    jest.mocked(fs.readdirSync)
+      .mockReturnValueOnce(['proj1'] as any)
+      .mockReturnValueOnce(['session.jsonl'] as any);
+    jest.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
+    jest.mocked(fs.readFileSync).mockReturnValue(jsonlContent);
+  }
+
+  test('returns empty bashCommands when no Bash tool_use exists', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({ type: 'assistant', timestamp: recentTs(), message: { content: [{ type: 'text', text: 'Hi' }] } }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands).toEqual([]);
+  });
+
+  test('extracts command string and timestamp from Bash tool_use', () => {
+    const ts = recentTs();
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: ts, cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: ts,
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'npm test' } },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    const cmds = projects[0].sessions[0].bashCommands;
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0].command).toBe('npm test');
+    expect(cmds[0].timestamp).toBe(ts);
+    expect(cmds[0].sessionId).toBe('session');
+  });
+
+  test('includes description when present in tool input', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'ls -la', description: 'List files' } },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands[0].description).toBe('List files');
+  });
+
+  test('pairs with tool_result to set isError', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'false' } },
+        ] },
+      }),
+      JSON.stringify({
+        type: 'user', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_result', tool_use_id: 'tu1', content: 'exit code 1', is_error: true },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands[0].isError).toBe(true);
+  });
+
+  test('sets isError to false for successful commands', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'echo hi' } },
+        ] },
+      }),
+      JSON.stringify({
+        type: 'user', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_result', tool_use_id: 'tu1', content: 'hi' },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands[0].isError).toBe(false);
+  });
+
+  test('collects multiple bash commands across messages', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'git status' } },
+          { type: 'tool_use', id: 'tu2', name: 'Read', input: { file_path: '/foo.ts' } },
+        ] },
+      }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu3', name: 'Bash', input: { command: 'npm test' } },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    const cmds = projects[0].sessions[0].bashCommands;
+    expect(cmds).toHaveLength(2);
+    expect(cmds[0].command).toBe('git status');
+    expect(cmds[1].command).toBe('npm test');
+  });
+
+  test('ignores Bash tool_use without command input', () => {
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: {} },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands).toEqual([]);
+  });
+
+  test('truncates output to 500 chars', () => {
+    const longOutput = 'x'.repeat(1000);
+    const lines = [
+      JSON.stringify({ type: 'user', timestamp: recentTs(), cwd: '/work', message: { content: 'hello world' } }),
+      JSON.stringify({
+        type: 'assistant', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'cat bigfile' } },
+        ] },
+      }),
+      JSON.stringify({
+        type: 'user', timestamp: recentTs(),
+        message: { content: [
+          { type: 'tool_result', tool_use_id: 'tu1', content: longOutput },
+        ] },
+      }),
+    ].join('\n');
+    setupSingleProject(lines);
+    const projects = readClaudeProjects();
+    expect(projects[0].sessions[0].bashCommands[0].output).toHaveLength(500);
+  });
+});
+
 describe('readPeacockColor (via readClaudeProjects)', () => {
   // Each test uses a unique project path to avoid hitting the module-level cache
   // from a previous test run.
