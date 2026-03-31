@@ -1531,7 +1531,7 @@
       case '2':
       case '3':
       case '4': {
-        const tabs = ['sessions', 'stats', 'about', 'bashback'];
+        const tabs = ['sessions', 'stats', 'bashback', 'about'];
         const idx = Number(e.key) - 1;
         const tab = tabs[idx];
         if (tab && tab !== activeTab) {
