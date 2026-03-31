@@ -26,7 +26,7 @@ class SessionNode extends vscode.TreeItem {
     this.description = session.status;
     this.tooltip = session.firstPrompt || session.sessionId;
     this.contextValue = 'session';
-    this.iconPath = new vscode.ThemeIcon(statusIcon(session.status));
+    this.iconPath = statusIcon(session.status);
     this.command = {
       command: 'claudeAgentManager.openPanel',
       title: 'Open session',
@@ -34,13 +34,13 @@ class SessionNode extends vscode.TreeItem {
   }
 }
 
-function statusIcon(status: string): string {
+function statusIcon(status: string): vscode.ThemeIcon {
   switch (status) {
-    case 'active': return 'debug-start';
-    case 'thinking': return 'loading~spin';
-    case 'waiting': return 'bell';
-    case 'recent': return 'clock';
-    default: return 'circle-outline';
+    case 'active': return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
+    case 'thinking': return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.blue'));
+    case 'waiting': return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.orange'));
+    case 'recent': return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.gray'));
+    default: return new vscode.ThemeIcon('circle-outline');
   }
 }
 
