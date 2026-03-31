@@ -10,10 +10,26 @@ export function activate(context: vscode.ExtensionContext): void {
   const refreshTimer = setInterval(() => treeProvider.refresh(), 30_000);
   context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
 
+  const setFilterContext = (filter: string, active: boolean) => {
+    vscode.commands.executeCommand('setContext', `claudeAgentManager.filter.${filter}`, active);
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand('claudeAgentManager.openPanel', () => {
       AgentManagerPanel.createOrShow(context);
-    })
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.refreshTree', () => {
+      treeProvider.refresh();
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.filterActive', () => {
+      setFilterContext('active', treeProvider.toggleFilter('active'));
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.filterWaiting', () => {
+      setFilterContext('waiting', treeProvider.toggleFilter('waiting'));
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.filterPinned', () => {
+      setFilterContext('pinned', treeProvider.toggleFilter('pinned'));
+    }),
   );
 }
 

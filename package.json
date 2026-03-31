@@ -32,6 +32,23 @@
         "command": "claudeAgentManager.openPanel",
         "title": "Claude: Open Agent Manager",
         "icon": "$(robot)"
+      },
+      {
+        "command": "claudeAgentManager.refreshTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeAgentManager.filterActive",
+        "title": "Active Sessions"
+      },
+      {
+        "command": "claudeAgentManager.filterWaiting",
+        "title": "Waiting Sessions"
+      },
+      {
+        "command": "claudeAgentManager.filterPinned",
+        "title": "Pinned Projects"
       }
     ],
     "keybindings": [
@@ -62,6 +79,44 @@
       "commandPalette": [
         {
           "command": "claudeAgentManager.openPanel"
+        },
+        {
+          "command": "claudeAgentManager.refreshTree",
+          "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.filterActive",
+          "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.filterWaiting",
+          "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.filterPinned",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "claudeAgentManager.refreshTree",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "navigation"
+        },
+        {
+          "command": "claudeAgentManager.filterActive",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "filter@1"
+        },
+        {
+          "command": "claudeAgentManager.filterWaiting",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "filter@2"
+        },
+        {
+          "command": "claudeAgentManager.filterPinned",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "filter@3"
         }
       ]
     }

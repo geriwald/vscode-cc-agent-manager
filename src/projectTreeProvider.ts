@@ -44,11 +44,31 @@ function statusIcon(status: string): string {
   }
 }
 
+export type TreeFilter = 'active' | 'waiting' | 'pinned';
+
 export class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private _projects: ClaudeProject[] = [];
+  private _filters = new Set<TreeFilter>();
+  private _pinnedKeys = new Set<string>();
+
+  get filters(): Set<TreeFilter> { return this._filters; }
+
+  set pinnedKeys(keys: Set<string>) {
+    this._pinnedKeys = keys;
+  }
+
+  toggleFilter(filter: TreeFilter): boolean {
+    if (this._filters.has(filter)) {
+      this._filters.delete(filter);
+    } else {
+      this._filters.add(filter);
+    }
+    this.refresh();
+    return this._filters.has(filter);
+  }
 
   refresh(): void {
     this._projects = readClaudeProjects();
@@ -62,10 +82,33 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   getChildren(element?: TreeNode): TreeNode[] {
     if (!element) {
       if (this._projects.length === 0) this._projects = readClaudeProjects();
-      return this._projects.map((p) => new ProjectNode(p));
+      let projects = this._projects;
+
+      if (this._filters.has('pinned')) {
+        projects = projects.filter((p) => this._pinnedKeys.has(p.key));
+      }
+      if (this._filters.has('active') || this._filters.has('waiting')) {
+        projects = projects.filter((p) =>
+          p.sessions.some((s) =>
+            (this._filters.has('active') && (s.status === 'active' || s.status === 'thinking')) ||
+            (this._filters.has('waiting') && s.status === 'waiting')
+          )
+        );
+      }
+
+      return projects.map((p) => new ProjectNode(p));
     }
     if (element instanceof ProjectNode) {
-      return element.project.sessions.map((s) => new SessionNode(s, element.project.key));
+      let sessions = element.project.sessions;
+
+      if (this._filters.has('active') || this._filters.has('waiting')) {
+        sessions = sessions.filter((s) =>
+          (this._filters.has('active') && (s.status === 'active' || s.status === 'thinking')) ||
+          (this._filters.has('waiting') && s.status === 'waiting')
+        );
+      }
+
+      return sessions.map((s) => new SessionNode(s, element.project.key));
     }
     return [];
   }
