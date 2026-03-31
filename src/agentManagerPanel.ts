@@ -430,6 +430,9 @@ export class AgentManagerPanel {
     const markedUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._context.extensionUri, 'media', 'marked.min.js')
     );
+    const bashDictUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._context.extensionUri, 'media', 'bash-dictionary.js')
+    );
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this._context.extensionUri, 'media', 'main.js')
     );
@@ -578,6 +581,7 @@ export class AgentManagerPanel {
     </div>
   </div>
   <script nonce="${nonce}" src="${markedUri}"></script>
+  <script nonce="${nonce}" src="${bashDictUri}"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

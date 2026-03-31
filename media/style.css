@@ -2001,3 +2001,30 @@ button {
 .bb-flag { color: var(--vscode-symbolIcon-fieldForeground, #9cdcfe); }
 .bb-str { color: var(--vscode-debugTokenExpression-string, #ce9178); }
 .bb-op { color: var(--vscode-symbolIcon-operatorForeground, #d4d4d4); font-weight: 600; }
+/* Command description in meta line */
+.bashback-cmd-desc {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+/* Flag decomposition chips */
+.bashback-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+.bashback-flag-chip {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-badge-background, rgba(255,255,255,0.06));
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.bashback-flag-chip .bb-flag {
+  font-weight: 600;
+}
+.bashback-flag-val {
+  color: var(--vscode-debugTokenExpression-string, #ce9178);
+}

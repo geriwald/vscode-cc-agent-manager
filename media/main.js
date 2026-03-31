@@ -1989,6 +1989,88 @@
 
   // ── Bashback ────────────────────────────────────────────────────────────────
 
+  /**
+   * Tokenize a command string respecting shell quotes.
+   * @param {string} cmd
+   * @returns {string[]}
+   */
+  function shellTokenize(cmd) {
+    const tokens = [];
+    let current = '';
+    let inQuote = '';
+    for (let i = 0; i < cmd.length; i++) {
+      const ch = cmd[i];
+      if (inQuote) {
+        current += ch;
+        if (ch === inQuote && cmd[i - 1] !== '\\') inQuote = '';
+      } else if (ch === '"' || ch === "'") {
+        current += ch;
+        inQuote = ch;
+      } else if (/\s/.test(ch)) {
+        if (current) { tokens.push(current); current = ''; }
+      } else {
+        current += ch;
+      }
+    }
+    if (current) tokens.push(current);
+    return tokens;
+  }
+
+  /**
+   * Decompose a bash command into its base command, subcommand, and annotated flags.
+   * Uses BASH_COMMANDS, BASH_FLAGS, COMMANDS_WITH_SUBCOMMANDS from bash-dictionary.js.
+   * @param {string} raw
+   * @returns {{ baseCommand: string, subCommand: string|null, description: string, flags: Array<{flag: string, value?: string, explanation: string, known: boolean}> }}
+   */
+  function decomposeBashCommand(raw) {
+    const tokens = shellTokenize(raw.trim());
+
+    // Skip env var assignments (VAR=value)
+    let start = 0;
+    while (start < tokens.length && /^[A-Za-z_]\w*=/.test(tokens[start])) start++;
+
+    const baseCommand = tokens[start] || tokens[0] || '';
+    const description = (typeof BASH_COMMANDS !== 'undefined' && BASH_COMMANDS[baseCommand]) || '';
+    const flagDb = (typeof BASH_FLAGS !== 'undefined' && BASH_FLAGS[baseCommand]) || {};
+
+    // Detect subcommand
+    let subCommand = null;
+    if (typeof COMMANDS_WITH_SUBCOMMANDS !== 'undefined' && COMMANDS_WITH_SUBCOMMANDS.has(baseCommand)) {
+      for (let j = start + 1; j < tokens.length; j++) {
+        if (!tokens[j].startsWith('-')) { subCommand = tokens[j]; break; }
+      }
+    }
+
+    const flags = [];
+    for (let i = start + 1; i < tokens.length; i++) {
+      const tok = tokens[i];
+      // Skip quoted strings and non-flag args
+      if ((tok.startsWith("'") || tok.startsWith('"')) || !tok.startsWith('-')) continue;
+
+      // --flag=value
+      const eq = tok.indexOf('=');
+      if (eq !== -1) {
+        const flag = tok.slice(0, eq);
+        const value = tok.slice(eq + 1);
+        flags.push({ flag, value, explanation: flagDb[flag] || '', known: !!flagDb[flag] });
+        continue;
+      }
+
+      // Combined short flags like -xvf (but not --long or -123)
+      if (tok.length > 2 && !tok.startsWith('--') && !/^-\d+$/.test(tok)) {
+        for (const ch of tok.slice(1)) {
+          const f = '-' + ch;
+          flags.push({ flag: f, explanation: flagDb[f] || '', known: !!flagDb[f] });
+        }
+        continue;
+      }
+
+      flags.push({ flag: tok, explanation: flagDb[tok] || '', known: !!flagDb[tok] });
+    }
+
+    return { baseCommand, subCommand, description, flags };
+  }
+
   function showBashback() {
     const convContainer = document.getElementById('conversation-container');
     const convHeader = document.getElementById('conversation-header');
@@ -2109,16 +2191,29 @@
       const statusCls = isErr ? 'bashback-status-err' : 'bashback-status-ok';
       const statusText = isErr ? 'ERR' : 'OK';
 
+      const decomp = decomposeBashCommand(cmd.command);
+
       html += `<div class="bashback-item" data-error="${isErr}">
         <div class="bashback-meta">
           <span class="bashback-time">${esc(time)}</span>
           <span class="bashback-project">${esc(cmd.projectName)}</span>
+          ${decomp.description ? '<span class="bashback-cmd-desc">' + esc(decomp.description) + '</span>' : ''}
           <span class="${statusCls}">${statusText}</span>
         </div>
         <pre class="bashback-cmd">${colorizeBashCommand(cmd.command)}</pre>`;
 
       if (cmd.description) {
         html += `<div class="bashback-desc">${esc(cmd.description)}</div>`;
+      }
+
+      // Flag decomposition
+      const knownFlags = decomp.flags.filter((f) => f.known);
+      if (knownFlags.length > 0) {
+        html += '<div class="bashback-flags">';
+        for (const f of knownFlags) {
+          html += `<span class="bashback-flag-chip"><span class="bb-flag">${esc(f.flag)}</span> ${esc(f.explanation)}${f.value ? ' <span class="bashback-flag-val">' + esc(f.value) + '</span>' : ''}</span>`;
+        }
+        html += '</div>';
       }
 
       html += `</div>`;
