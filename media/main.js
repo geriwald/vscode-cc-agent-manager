@@ -85,7 +85,7 @@
   let helpOverlayVisible = false;
 
   // Tab bar state
-  /** @type {'sessions' | 'stats' | 'about'} */
+  /** @type {'sessions' | 'stats' | 'about' | 'bashback'} */
   let activeTab = 'sessions';
   /** @type {string | null} project key selected for stats (null = all) */
   let statsProjectKey = null;
@@ -149,8 +149,9 @@
       }
       renderSidebar(filtered());
       checkWaitingAndNotify();
-      // Refresh stats view if it's currently displayed
+      // Refresh stats/bashback view if currently displayed
       if (activeTab === 'stats') showStats();
+      if (activeTab === 'bashback') showBashback();
       document.getElementById('last-updated').textContent =
         new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
@@ -1528,8 +1529,9 @@
         e.preventDefault(); showHelpOverlay(); break;
       case '1':
       case '2':
-      case '3': {
-        const tabs = ['sessions', 'stats', 'about'];
+      case '3':
+      case '4': {
+        const tabs = ['sessions', 'stats', 'about', 'bashback'];
         const idx = Number(e.key) - 1;
         const tab = tabs[idx];
         if (tab && tab !== activeTab) {
@@ -1538,6 +1540,7 @@
           if (tabBar) tabBar.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
           if (tab === 'stats') showStats();
           else if (tab === 'about') showAbout();
+          else if (tab === 'bashback') showBashback();
           else hideStats();
         }
         e.preventDefault();
@@ -1636,6 +1639,8 @@
         showStats();
       } else if (tab === 'about') {
         showAbout();
+      } else if (tab === 'bashback') {
+        showBashback();
       } else {
         hideStats();
       }
@@ -1982,6 +1987,149 @@
     }
   }
 
+  // ── Bashback ────────────────────────────────────────────────────────────────
+
+  function showBashback() {
+    const convContainer = document.getElementById('conversation-container');
+    const convHeader = document.getElementById('conversation-header');
+    const sendBar = document.getElementById('send-bar');
+    if (convHeader) convHeader.style.display = 'none';
+    if (sendBar) sendBar.style.display = 'none';
+    if (convContainer) {
+      convContainer.innerHTML = renderBashbackView();
+      convContainer.style.display = '';
+    }
+  }
+
+  /**
+   * Basic syntax coloring for a bash command string.
+   * Returns HTML with span classes: bb-cmd, bb-flag, bb-str, bb-op.
+   * @param {string} raw
+   * @returns {string}
+   */
+  function colorizeBashCommand(raw) {
+    const OPERATORS = /^(&&|\|\||[|;><]|>>|2>&1|2>|&>)$/;
+    const tokens = [];
+    let current = '';
+    let inQuote = '';
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (inQuote) {
+        current += ch;
+        if (ch === inQuote && raw[i - 1] !== '\\') {
+          tokens.push({ type: 'str', text: current });
+          current = '';
+          inQuote = '';
+        }
+      } else if (ch === '"' || ch === "'") {
+        if (current) { tokens.push({ type: 'raw', text: current }); current = ''; }
+        current = ch;
+        inQuote = ch;
+      } else if (ch === ' ' || ch === '\t') {
+        if (current) { tokens.push({ type: 'raw', text: current }); current = ''; }
+        tokens.push({ type: 'ws', text: ch });
+      } else {
+        current += ch;
+      }
+    }
+    if (current) tokens.push({ type: inQuote ? 'str' : 'raw', text: current });
+
+    let foundCmd = false;
+    let html = '';
+    for (const tok of tokens) {
+      const escaped = esc(tok.text);
+      if (tok.type === 'ws') {
+        html += escaped;
+      } else if (tok.type === 'str') {
+        html += '<span class="bb-str">' + escaped + '</span>';
+      } else if (OPERATORS.test(tok.text)) {
+        html += '<span class="bb-op">' + escaped + '</span>';
+      } else if (tok.text.startsWith('-')) {
+        html += '<span class="bb-flag">' + escaped + '</span>';
+      } else if (!foundCmd && /^[a-zA-Z_/.~]/.test(tok.text)) {
+        // Skip env var assignments like VAR=value
+        if (tok.text.includes('=') && !tok.text.startsWith('=')) {
+          html += escaped;
+        } else {
+          html += '<span class="bb-cmd">' + escaped + '</span>';
+          foundCmd = true;
+        }
+      } else {
+        html += escaped;
+      }
+    }
+    return html;
+  }
+
+  function renderBashbackView() {
+    // Collect all bash commands from all projects (or filtered project)
+    const projects = statsProjectKey
+      ? allProjects.filter((p) => p.key === statsProjectKey)
+      : allProjects;
+
+    /** @type {Array<{command: string, description?: string, timestamp?: string, sessionId: string, projectName: string, isError?: boolean, output?: string}>} */
+    const allCmds = [];
+    for (const proj of projects) {
+      for (const sess of proj.sessions) {
+        for (const cmd of (sess.bashCommands || [])) {
+          allCmds.push({ ...cmd, projectName: proj.displayName });
+        }
+      }
+    }
+
+    // Sort by timestamp descending (most recent first)
+    allCmds.sort((a, b) => {
+      const at = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bt = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bt - at;
+    });
+
+    // Cap at 500 for performance
+    const cmds = allCmds.slice(0, 500);
+
+    if (cmds.length === 0) {
+      return `<div class="bashback-view">
+        <div class="bashback-empty">No bash commands found in recent sessions.</div>
+      </div>`;
+    }
+
+    let html = `<div class="bashback-view">
+      <div class="bashback-header">
+        <span class="bashback-title">Bash Commands</span>
+        <span class="bashback-count">${allCmds.length} command${allCmds.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="bashback-list">`;
+
+    for (const cmd of cmds) {
+      const time = cmd.timestamp
+        ? new Date(cmd.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+          ', ' + new Date(cmd.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '';
+      const isErr = cmd.isError === true;
+      const statusCls = isErr ? 'bashback-status-err' : 'bashback-status-ok';
+      const statusText = isErr ? 'ERR' : 'OK';
+
+      html += `<div class="bashback-item" data-error="${isErr}">
+        <div class="bashback-meta">
+          <span class="bashback-time">${esc(time)}</span>
+          <span class="bashback-project">${esc(cmd.projectName)}</span>
+          <span class="${statusCls}">${statusText}</span>
+        </div>
+        <pre class="bashback-cmd">${colorizeBashCommand(cmd.command)}</pre>`;
+
+      if (cmd.description) {
+        html += `<div class="bashback-desc">${esc(cmd.description)}</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    html += `</div></div>`;
+    return html;
+  }
+
+  // ── About view ──────────────────────────────────────────────────────────────
+
   function renderAboutView() {
     const productivity = [
       {
@@ -2021,7 +2169,7 @@
         name: 'Bashback',
         icon: '\u{1F4BB}',
         desc: 'Study the bash commands Claude uses. Augmented history with flag decomposition, man page parsing, quiz mode, and generated exercises.',
-        ready: false,
+        ready: true,
       },
       {
         name: 'Grammar Check',
