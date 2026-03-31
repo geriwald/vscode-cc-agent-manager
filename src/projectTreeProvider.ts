@@ -20,7 +20,7 @@ class SessionNode extends vscode.TreeItem {
     public readonly projectKey: string,
   ) {
     super(
-      session.firstPrompt?.slice(0, 60) || session.sessionId.slice(0, 8),
+      session.firstPrompt?.slice(0, 40) || session.sessionId.slice(0, 8),
       vscode.TreeItemCollapsibleState.None,
     );
     this.description = session.status;
