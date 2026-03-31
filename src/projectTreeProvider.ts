@@ -23,7 +23,7 @@ class SessionNode extends vscode.TreeItem {
       session.firstPrompt?.slice(0, 40) || session.sessionId.slice(0, 8),
       vscode.TreeItemCollapsibleState.None,
     );
-    this.description = session.status;
+    this.description = '';
     this.tooltip = session.firstPrompt || session.sessionId;
     this.contextValue = 'session';
     this.iconPath = statusIcon(session.status);
@@ -78,7 +78,7 @@ class FilteredSessionsProvider implements vscode.TreeDataProvider<SessionNode> {
       for (const sess of proj.sessions) {
         if (this._statusFilter(sess.status)) {
           const node = new SessionNode(sess, proj.key);
-          node.description = `${proj.displayName} · ${sess.status}`;
+          node.description = proj.displayName;
           nodes.push(node);
         }
       }
