@@ -46,11 +46,21 @@ function statusIcon(status: string): string {
 
 export type TreeFilter = 'all' | 'active' | 'waiting' | 'pinned';
 
-export class ActiveSessionsProvider implements vscode.TreeDataProvider<SessionNode> {
+class FilteredSessionsProvider implements vscode.TreeDataProvider<SessionNode> {
   private _onDidChangeTreeData = new vscode.EventEmitter<SessionNode | undefined>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private _projects: ClaudeProject[] = [];
+  private _statusFilter: (status: string) => boolean;
+
+  constructor(statusFilter: (status: string) => boolean) {
+    this._statusFilter = statusFilter;
+  }
+
+  setProjects(projects: ClaudeProject[]): void {
+    this._projects = projects;
+    this._onDidChangeTreeData.fire(undefined);
+  }
 
   refresh(): void {
     this._projects = readClaudeProjects();
@@ -66,7 +76,7 @@ export class ActiveSessionsProvider implements vscode.TreeDataProvider<SessionNo
     const nodes: SessionNode[] = [];
     for (const proj of this._projects) {
       for (const sess of proj.sessions) {
-        if (sess.status === 'active' || sess.status === 'thinking' || sess.status === 'waiting') {
+        if (this._statusFilter(sess.status)) {
           const node = new SessionNode(sess, proj.key);
           node.description = `${proj.displayName} · ${sess.status}`;
           nodes.push(node);
@@ -74,6 +84,52 @@ export class ActiveSessionsProvider implements vscode.TreeDataProvider<SessionNo
       }
     }
     return nodes;
+  }
+}
+
+export class ActiveSessionsProvider extends FilteredSessionsProvider {
+  constructor() {
+    super((s) => s === 'active' || s === 'thinking');
+  }
+}
+
+export class WaitingSessionsProvider extends FilteredSessionsProvider {
+  constructor() {
+    super((s) => s === 'waiting');
+  }
+}
+
+export class PinnedProjectsProvider implements vscode.TreeDataProvider<TreeNode> {
+  private _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined>();
+  readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+  private _projects: ClaudeProject[] = [];
+  private _pinnedKeys = new Set<string>();
+
+  set pinnedKeys(keys: Set<string>) {
+    this._pinnedKeys = keys;
+  }
+
+  refresh(): void {
+    this._projects = readClaudeProjects();
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  getTreeItem(element: TreeNode): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: TreeNode): TreeNode[] {
+    if (!element) {
+      if (this._projects.length === 0) this._projects = readClaudeProjects();
+      return this._projects
+        .filter((p) => this._pinnedKeys.has(p.key))
+        .map((p) => new ProjectNode(p));
+    }
+    if (element instanceof ProjectNode) {
+      return element.project.sessions.map((s) => new SessionNode(s, element.project.key));
+    }
+    return [];
   }
 }
 

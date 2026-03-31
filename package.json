@@ -78,6 +78,14 @@
           "name": "Active Sessions"
         },
         {
+          "id": "claudeAgentManager.waitingSessions",
+          "name": "Waiting Sessions"
+        },
+        {
+          "id": "claudeAgentManager.pinnedProjects",
+          "name": "Pinned Projects"
+        },
+        {
           "id": "claudeAgentManager.projectTree",
           "name": "All Projects"
         }
