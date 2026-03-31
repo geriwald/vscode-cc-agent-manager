@@ -25,10 +25,18 @@ export function activate(context: vscode.ExtensionContext): void {
   const updateTime = () => {
     waitingTreeView.description = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+  const syncPinnedKeys = () => {
+    const keys = new Set(context.globalState.get<string[]>('pinnedProjectKeys', []));
+    pinnedProvider.pinnedKeys = keys;
+    treeProvider.pinnedKeys = keys;
+  };
+
   const refreshAll = () => {
+    syncPinnedKeys();
     activeProvider.refresh(); waitingProvider.refresh(); pinnedProvider.refresh(); treeProvider.refresh();
     updateTime();
   };
+  syncPinnedKeys();
   updateTime();
   const refreshTimer = setInterval(refreshAll, 30_000);
   context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
@@ -80,6 +88,14 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('claudeAgentManager.filterPinned', () => {
       setFilterContext('pinned', treeProvider.toggleFilter('pinned'));
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.togglePin', (node: any) => {
+      const key = node?.project?.key;
+      if (!key) return;
+      const pinned = new Set(context.globalState.get<string[]>('pinnedProjectKeys', []));
+      if (pinned.has(key)) { pinned.delete(key); } else { pinned.add(key); }
+      context.globalState.update('pinnedProjectKeys', [...pinned]);
+      refreshAll();
     }),
     vscode.commands.registerCommand('claudeAgentManager.openSession', (projectKey: string, sessionId: string, agentId?: string) => {
       AgentManagerPanel.createOrShowSession(context, projectKey, sessionId, agentId);

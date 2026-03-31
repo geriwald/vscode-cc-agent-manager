@@ -67,6 +67,11 @@
       {
         "command": "claudeAgentManager.openSession",
         "title": "Open Session"
+      },
+      {
+        "command": "claudeAgentManager.togglePin",
+        "title": "Toggle Pin",
+        "icon": "$(pin)"
       }
     ],
     "keybindings": [
@@ -141,6 +146,17 @@
         {
           "command": "claudeAgentManager.openSession",
           "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.togglePin",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "claudeAgentManager.togglePin",
+          "when": "viewItem == project",
+          "group": "inline"
         }
       ],
       "view/title": [
