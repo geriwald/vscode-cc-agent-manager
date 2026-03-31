@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext): void {
   vscode.window.createTreeView('claudeAgentManager.activeSessions', {
     treeDataProvider: activeProvider,
   });
-  vscode.window.createTreeView('claudeAgentManager.waitingSessions', {
+  const waitingTreeView = vscode.window.createTreeView('claudeAgentManager.waitingSessions', {
     treeDataProvider: waitingProvider,
   });
   vscode.window.createTreeView('claudeAgentManager.pinnedProjects', {
@@ -22,7 +22,14 @@ export function activate(context: vscode.ExtensionContext): void {
     showCollapseAll: true,
   });
 
-  const refreshAll = () => { activeProvider.refresh(); waitingProvider.refresh(); pinnedProvider.refresh(); treeProvider.refresh(); };
+  const updateTime = () => {
+    waitingTreeView.description = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const refreshAll = () => {
+    activeProvider.refresh(); waitingProvider.refresh(); pinnedProvider.refresh(); treeProvider.refresh();
+    updateTime();
+  };
+  updateTime();
   const refreshTimer = setInterval(refreshAll, 30_000);
   context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
 
@@ -73,6 +80,10 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('claudeAgentManager.filterPinned', () => {
       setFilterContext('pinned', treeProvider.toggleFilter('pinned'));
+    }),
+    vscode.commands.registerCommand('claudeAgentManager.openSettings', () => {
+      AgentManagerPanel.createOrShow(context);
+      // Settings panel is toggled via webview message — just open the panel
     }),
   );
 }

@@ -58,6 +58,11 @@
       {
         "command": "claudeAgentManager.filterPinned",
         "title": "Pinned Projects"
+      },
+      {
+        "command": "claudeAgentManager.openSettings",
+        "title": "Settings",
+        "icon": "$(gear)"
       }
     ],
     "keybindings": [
@@ -124,18 +129,27 @@
         {
           "command": "claudeAgentManager.filterPinned",
           "when": "false"
+        },
+        {
+          "command": "claudeAgentManager.openSettings",
+          "when": "false"
         }
       ],
       "view/title": [
         {
           "command": "claudeAgentManager.searchTree",
-          "when": "view == claudeAgentManager.projectTree",
+          "when": "view == claudeAgentManager.waitingSessions",
           "group": "navigation@1"
         },
         {
           "command": "claudeAgentManager.refreshTree",
-          "when": "view == claudeAgentManager.projectTree",
+          "when": "view == claudeAgentManager.waitingSessions",
           "group": "navigation@2"
+        },
+        {
+          "command": "claudeAgentManager.openSettings",
+          "when": "view == claudeAgentManager.waitingSessions",
+          "group": "navigation@3"
         },
         {
           "command": "claudeAgentManager.filterAll",
