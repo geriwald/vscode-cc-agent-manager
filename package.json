@@ -41,6 +41,23 @@
         "mac": "cmd+shift+a"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claude-agent-manager",
+          "title": "Claude Agent Manager",
+          "icon": "media/activity-bar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "claude-agent-manager": [
+        {
+          "id": "claudeAgentManager.projectTree",
+          "name": "Projects"
+        }
+      ]
+    },
     "menus": {
       "commandPalette": [
         {
