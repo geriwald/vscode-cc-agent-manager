@@ -79,12 +79,12 @@
     "views": {
       "claude-agent-manager": [
         {
-          "id": "claudeAgentManager.activeSessions",
-          "name": "Active Sessions"
-        },
-        {
           "id": "claudeAgentManager.waitingSessions",
           "name": "Waiting Sessions"
+        },
+        {
+          "id": "claudeAgentManager.activeSessions",
+          "name": "Active Sessions"
         },
         {
           "id": "claudeAgentManager.pinnedProjects",
