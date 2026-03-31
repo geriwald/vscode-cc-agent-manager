@@ -7,10 +7,20 @@ export function activate(context: vscode.ExtensionContext): void {
   const waitingProvider = new WaitingSessionsProvider();
   const pinnedProvider = new PinnedProjectsProvider();
   const treeProvider = new ProjectTreeProvider();
-  vscode.window.registerTreeDataProvider('claudeAgentManager.activeSessions', activeProvider);
-  vscode.window.registerTreeDataProvider('claudeAgentManager.waitingSessions', waitingProvider);
-  vscode.window.registerTreeDataProvider('claudeAgentManager.pinnedProjects', pinnedProvider);
-  vscode.window.registerTreeDataProvider('claudeAgentManager.projectTree', treeProvider);
+  vscode.window.createTreeView('claudeAgentManager.activeSessions', {
+    treeDataProvider: activeProvider,
+  });
+  vscode.window.createTreeView('claudeAgentManager.waitingSessions', {
+    treeDataProvider: waitingProvider,
+  });
+  vscode.window.createTreeView('claudeAgentManager.pinnedProjects', {
+    treeDataProvider: pinnedProvider,
+    showCollapseAll: true,
+  });
+  vscode.window.createTreeView('claudeAgentManager.projectTree', {
+    treeDataProvider: treeProvider,
+    showCollapseAll: true,
+  });
 
   const refreshAll = () => { activeProvider.refresh(); waitingProvider.refresh(); pinnedProvider.refresh(); treeProvider.refresh(); };
   const refreshTimer = setInterval(refreshAll, 30_000);
