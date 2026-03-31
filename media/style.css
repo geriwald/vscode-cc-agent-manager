@@ -1915,3 +1915,89 @@ button {
 .about-footer-sep {
   opacity: 0.4;
 }
+
+/* ── Bashback View ─────────────────────────────────────────────────────────── */
+.bashback-view {
+  padding: 16px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.bashback-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.bashback-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+.bashback-count {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+}
+.bashback-empty {
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+  padding: 48px 0;
+  font-size: 13px;
+}
+.bashback-list {
+  display: flex;
+  flex-direction: column;
+}
+.bashback-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #333);
+  transition: background 0.1s;
+}
+.bashback-item:hover {
+  background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.04));
+}
+.bashback-item[data-error="true"] {
+  border-left: 3px solid var(--vscode-errorForeground, #f44);
+}
+.bashback-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 4px;
+}
+.bashback-time {
+  min-width: 100px;
+}
+.bashback-project {
+  opacity: 0.7;
+}
+.bashback-status-ok {
+  color: var(--vscode-testing-iconPassed, #6a6);
+  font-weight: 600;
+  font-size: 10px;
+}
+.bashback-status-err {
+  color: var(--vscode-errorForeground, #f44);
+  font-weight: 600;
+  font-size: 10px;
+}
+.bashback-cmd {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  line-height: 1.5;
+}
+.bashback-desc {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+  font-style: italic;
+}
+/* Syntax coloring */
+.bb-cmd { color: var(--vscode-symbolIcon-functionForeground, #dcdcaa); }
+.bb-flag { color: var(--vscode-symbolIcon-fieldForeground, #9cdcfe); }
+.bb-str { color: var(--vscode-debugTokenExpression-string, #ce9178); }
+.bb-op { color: var(--vscode-symbolIcon-operatorForeground, #d4d4d4); font-weight: 600; }
