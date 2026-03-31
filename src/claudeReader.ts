@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ClaudeProject, ClaudeSession, SubAgent, ConversationMessage, MessageBlock, SessionStatus } from './types';
+import { BashCommand, ClaudeProject, ClaudeSession, SubAgent, ConversationMessage, MessageBlock, SessionStatus } from './types';
 
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 const MAX_SESSION_AGE_DAYS = 30;
@@ -155,6 +155,8 @@ function parseSubAgent(agentFilePath: string): SubAgent | null {
   let userChars = 0;
   let assistantLines = 0;
   let codeLines = 0;
+  const bashCommands: BashCommand[] = [];
+  const bashToolUseIds = new Map<string, number>();
 
   for (const msg of messages) {
     if (msg.timestamp) {
@@ -188,6 +190,27 @@ function parseSubAgent(agentFilePath: string): SubAgent | null {
       for (const item of msg.message!.content as ContentItem[]) {
         if (item.type === 'tool_use' && item.name) {
           toolCounts[item.name] = (toolCounts[item.name] || 0) + 1;
+          if (item.name === 'Bash' && item.input?.command) {
+            const idx = bashCommands.push({
+              command: str(item.input.command),
+              description: item.input.description == null ? undefined : str(item.input.description),
+              timestamp: msg.timestamp,
+              sessionId: agentId,
+            }) - 1;
+            if (item.id) bashToolUseIds.set(item.id, idx);
+          }
+        }
+      }
+    }
+
+    // Match tool results to bash commands
+    if (Array.isArray(msg.message?.content)) {
+      for (const item of msg.message!.content as ContentItem[]) {
+        if (item.type === 'tool_result' && item.tool_use_id && bashToolUseIds.has(item.tool_use_id)) {
+          const idx = bashToolUseIds.get(item.tool_use_id)!;
+          bashCommands[idx].isError = !!item.is_error;
+          const output = extractToolResultText(item.content);
+          if (output) bashCommands[idx].output = output.slice(0, 500);
         }
       }
     }
@@ -197,7 +220,7 @@ function parseSubAgent(agentFilePath: string): SubAgent | null {
     agentId, slug, firstPrompt, firstTimestamp, lastTimestamp, messageCount,
     lastMessageRole,
     status: deriveStatus(lastMessageRole, lastContentBlockType, lastContentBlockText),
-    toolCounts, userChars, assistantLines, codeLines,
+    toolCounts, userChars, assistantLines, codeLines, bashCommands,
   };
 }
 
@@ -221,6 +244,8 @@ function parseSession(
   let userChars = 0;
   let assistantLines = 0;
   let codeLines = 0;
+  const bashCommands: BashCommand[] = [];
+  const bashToolUseIds = new Map<string, number>();
 
   for (const msg of messages) {
     if (msg.timestamp) {
@@ -255,6 +280,27 @@ function parseSession(
       for (const item of msg.message!.content as ContentItem[]) {
         if (item.type === 'tool_use' && item.name) {
           toolCounts[item.name] = (toolCounts[item.name] || 0) + 1;
+          if (item.name === 'Bash' && item.input?.command) {
+            const idx = bashCommands.push({
+              command: str(item.input.command),
+              description: item.input.description == null ? undefined : str(item.input.description),
+              timestamp: msg.timestamp,
+              sessionId,
+            }) - 1;
+            if (item.id) bashToolUseIds.set(item.id, idx);
+          }
+        }
+      }
+    }
+
+    // Match tool results to bash commands
+    if (Array.isArray(msg.message?.content)) {
+      for (const item of msg.message!.content as ContentItem[]) {
+        if (item.type === 'tool_result' && item.tool_use_id && bashToolUseIds.has(item.tool_use_id)) {
+          const idx = bashToolUseIds.get(item.tool_use_id)!;
+          bashCommands[idx].isError = !!item.is_error;
+          const output = extractToolResultText(item.content);
+          if (output) bashCommands[idx].output = output.slice(0, 500);
         }
       }
     }
@@ -294,7 +340,7 @@ function parseSession(
     subAgents,
     lastMessageRole,
     status: deriveStatus(lastMessageRole, lastContentBlockType, lastContentBlockText),
-    toolCounts, userChars, assistantLines, codeLines,
+    toolCounts, userChars, assistantLines, codeLines, bashCommands,
   };
 }
 
