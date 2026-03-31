@@ -2016,8 +2016,9 @@ button {
 }
 .bashback-flag-chip {
   font-size: 11px;
-  color: var(--vscode-descriptionForeground);
-  background: var(--vscode-badge-background, rgba(255,255,255,0.06));
+  color: var(--vscode-foreground);
+  background: var(--vscode-textBlockQuote-background, rgba(255,255,255,0.05));
+  border: 1px solid var(--vscode-panel-border, rgba(255,255,255,0.1));
   padding: 1px 6px;
   border-radius: 3px;
   white-space: nowrap;
