@@ -39,6 +39,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "claudeAgentManager.searchTree",
+        "title": "Search Projects",
+        "icon": "$(search)"
+      },
+      {
         "command": "claudeAgentManager.filterAll",
         "title": "All"
       },
@@ -101,6 +106,10 @@
           "when": "false"
         },
         {
+          "command": "claudeAgentManager.searchTree",
+          "when": "false"
+        },
+        {
           "command": "claudeAgentManager.filterAll",
           "when": "false"
         },
@@ -119,9 +128,14 @@
       ],
       "view/title": [
         {
+          "command": "claudeAgentManager.searchTree",
+          "when": "view == claudeAgentManager.projectTree",
+          "group": "navigation@1"
+        },
+        {
           "command": "claudeAgentManager.refreshTree",
           "when": "view == claudeAgentManager.projectTree",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "claudeAgentManager.filterAll",

@@ -141,6 +141,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<TreeNode> {
   private _filters = new Set<TreeFilter>();
   private _pinnedKeys = new Set<string>();
 
+  get allProjects(): ClaudeProject[] {
+    if (this._projects.length === 0) this._projects = readClaudeProjects();
+    return this._projects;
+  }
+
   get filters(): Set<TreeFilter> { return this._filters; }
 
   set pinnedKeys(keys: Set<string>) {
